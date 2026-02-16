@@ -47,6 +47,8 @@ resources = path_provider("resources/", RDIR, shared_resources, exclude_from_sha
 scripts = script_path_provider(Path(workflow.snakefile).parent)
 
 RESULTS = "results/" + RDIR
+PREFIX = config["run"]["prefix"]
+# EXPORT_PATH = config["plotting"]["export_path"]
 
 
 localrules:
@@ -74,6 +76,8 @@ include: "rules/build_sector.smk"
 include: "rules/solve_electricity.smk"
 include: "rules/postprocess.smk"
 include: "rules/development.smk"
+include: "rules/solve_again.smk"
+# include: "rules/postprocess_paper.smk"
 
 
 if config["foresight"] == "overnight":

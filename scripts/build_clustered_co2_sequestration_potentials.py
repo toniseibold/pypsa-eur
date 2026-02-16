@@ -13,6 +13,7 @@ import geopandas as gpd
 import pandas as pd
 
 from scripts._helpers import configure_logging, set_scenario_config
+from shapely.algorithms.polylabel import polylabel
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,61 @@ def allocate_sequestration_potential(
     overlay["share"] = area(overlay) / overlay["area_sqkm"]
     adjust_cols = overlay.columns.difference({"name", "area_sqkm", "geometry", "share"})
     overlay[adjust_cols] = overlay[adjust_cols].multiply(overlay["share"], axis=0)
-    return overlay.dissolve("name", aggfunc="sum")[attr].sum(axis=1)
+    # Clustering
+    overlay.to_crs(epsg=3035, inplace=True)
+    buffer_shapes = overlay.groupby("name").agg(
+        {"geometry": lambda x: x.union_all(), "area_sqkm": "sum"}
+    )
+    buffer_shapes = gpd.GeoDataFrame(buffer_shapes, geometry="geometry", crs=overlay.crs)
+    buffer_shapes["geometry"] = buffer_shapes.apply(
+        lambda x: x["geometry"].buffer(50*1e3), axis=1
+    )
+    # Explode
+    buffer_shapes = buffer_shapes.explode()
+    buffer_shapes["poi"] = buffer_shapes.apply(lambda x: polylabel(x.geometry, tolerance=10), axis=1)
+    buffer_shapes["poi"].crs = buffer_shapes.crs
+    buffer_shapes["id"] = buffer_shapes.groupby("name").cumcount()
+    buffer_shapes.reset_index(inplace=True)
+    buffer_shapes["id"] = buffer_shapes["name"] + " offshore " + buffer_shapes["id"].astype(str) if buffer_shapes["id"].max() > 0 else buffer_shapes["name"]
+    buffer_shapes.set_index("name", inplace=True)
+
+    overlay["cluster"] = overlay.apply(
+        lambda x: gpd.sjoin_nearest(
+            gpd.GeoDataFrame(geometry=[x.geometry], crs = overlay.crs), 
+            buffer_shapes.loc[buffer_shapes.index == x["name"]],
+        )["id"].values[0],
+        axis=1,
+    )
+
+    overlay = overlay.groupby("cluster").agg(
+        {
+            "name": "first",
+            "area_sqkm": "sum",
+            "geometry": lambda x: x.union_all(),
+            **{a: "sum" for a in attr},
+        }
+    )
+    overlay["total_estimate_Mt"] = overlay[attr].sum(axis=1)
+    overlay["total_estimate_Mt"] = overlay["total_estimate_Mt"].round(3)
+
+    # Map PoI
+    buffer_shapes.set_index("id", inplace=True)
+    overlay = gpd.GeoDataFrame(overlay, geometry="geometry", crs="EPSG:3035")
+
+    # Update area
+    overlay["area_sqkm"] = area(overlay)
+
+    buffer_shapes.to_crs(epsg=4326, inplace=True)
+    buffer_shapes["poi"] = buffer_shapes["poi"].to_crs(epsg=4326)
+    overlay.to_crs(epsg=4326, inplace=True)
+    overlay["x"] = buffer_shapes.loc[overlay.index, "poi"].x
+    overlay["y"] = buffer_shapes.loc[overlay.index, "poi"].y
+
+    # Rename "name" to "bus_onshore"
+    overlay.rename(columns={"name": "bus_onshore"}, inplace=True)
+
+    return overlay[["bus_onshore", "total_estimate_Mt", "x", "y", "geometry"]]
+
 
 
 if __name__ == "__main__":
@@ -60,6 +115,6 @@ if __name__ == "__main__":
         gdf, regions, attr=cf["attribute"], threshold=cf["min_size"]
     )
 
-    s = s.where(s > cf["min_size"]).dropna()
+    s = s.where(s.total_estimate_Mt > cf["min_size"]).dropna()
 
-    s.to_csv(snakemake.output.sequestration_potential)
+    s.to_file(snakemake.output.sequestration_potential)

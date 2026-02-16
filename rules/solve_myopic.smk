@@ -14,6 +14,7 @@ rule add_existing_baseyear:
         costs=config_provider("costs"),
         heat_pump_sources=config_provider("sector", "heat_pump_sources"),
         energy_totals_year=config_provider("energy", "energy_totals_year"),
+        carrier_networks=config_provider("carrier_networks"),
     input:
         network=resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
@@ -108,6 +109,7 @@ rule solve_sector_network_myopic:
     message:
         "Solving sector-coupled network with myopic foresight for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizons, {wildcards.opts} electric options and {wildcards.sector_opts} sector options"
     params:
+        pcipmi_policy_paper=config_provider("pcipmi_policy_paper"),
         solving=config_provider("solving"),
         foresight=config_provider("foresight"),
         co2_sequestration_potential=config_provider(

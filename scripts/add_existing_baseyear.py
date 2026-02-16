@@ -767,6 +767,7 @@ if __name__ == "__main__":
     update_config_from_wildcards(snakemake.config, snakemake.wildcards)
 
     options = snakemake.params.sector
+    carrier_networks = snakemake.params.carrier_networks
 
     renewable_carriers = snakemake.params.carriers
 
@@ -775,7 +776,7 @@ if __name__ == "__main__":
     n = pypsa.Network(snakemake.input.network)
 
     # define spatial resolution of carriers
-    spatial = define_spatial(n.buses[n.buses.carrier == "AC"].index, options)
+    spatial = define_spatial(n.buses[n.buses.carrier == "AC"].index, options, carrier_networks)
     add_build_year_to_new_assets(n, baseyear)
 
     costs = load_costs(snakemake.input.costs)

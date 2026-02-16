@@ -957,7 +957,7 @@ rule build_clustered_co2_sequestration_potentials:
         regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
     output:
         sequestration_potential=resources(
-            "co2_sequestration_potential_base_s_{clusters}.csv"
+            "co2_sequestration_potential_base_s_{clusters}.geojson"
         ),
     threads: 1
     resources:
@@ -1544,6 +1544,20 @@ def input_heat_source_power(w):
     }
 
 
+def input_pcipmi_projects(w):
+    pcipmi_projects = config_provider("pcipmi_projects")(w)
+    # if pcipmi_projects["enable"]:
+    components = pcipmi_projects["include"] + ["buses_pcipmi_offshore"]
+    inputs = {
+        project_type: resources(
+            f"pcipmi_projects/{project_type}"
+            + "_s_{clusters}_{opts}.csv"
+        )
+        for project_type in components if project_type != "storage_units_electricity"
+    }
+    return inputs
+
+
 rule prepare_sector_network:
     message:
         "Preparing integrated sector-coupled energy network for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizon, {wildcards.opts} electric options and {wildcards.sector_opts} sector options"
@@ -1580,9 +1594,12 @@ rule prepare_sector_network:
         temperature_limited_stores=config_provider(
             "sector", "district_heating", "temperature_limited_stores"
         ),
+        carrier_networks=config_provider("carrier_networks"),
+        pcipmi_projects=config_provider("pcipmi_projects"),
     input:
         unpack(input_profile_offwind),
         unpack(input_heat_source_power),
+        unpack(input_pcipmi_projects),
         **rules.cluster_gas_network.output,
         **rules.build_gas_input_locations.output,
         snapshot_weightings=resources(
@@ -1605,7 +1622,7 @@ rule prepare_sector_network:
             else []
         ),
         sequestration_potential=lambda w: (
-            resources("co2_sequestration_potential_base_s_{clusters}.csv")
+            resources("co2_sequestration_potential_base_s_{clusters}.geojson")
             if config_provider(
                 "sector", "regional_co2_sequestration_potential", "enable"
             )(w)
@@ -1706,6 +1723,22 @@ rule prepare_sector_network:
             if config_provider("sector", "district_heating", "ates", "enable")(w)
             else []
         ),
+        pcipmi_links_co2_pipeline=lambda w: (
+            resources("pcipmi_projects/links_co2_pipeline_s_{clusters}_{opts}.csv")
+            if (
+                config_provider("carrier_networks", "CO2", "enable")(w) and
+                config_provider("carrier_networks", "CO2", "include", "pcipmi")(w)
+                )
+            else []
+        ),
+        pcipmi_links_h2_pipeline=lambda w: (
+            resources("pcipmi_projects/links_h2_pipeline_s_{clusters}_{opts}.csv")
+            if (
+                config_provider("carrier_networks", "H2", "enable")(w) and
+                config_provider("carrier_networks", "H2", "include", "pcipmi")(w)
+                )
+            else []
+        ),
     output:
         resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
@@ -1723,3 +1756,46 @@ rule prepare_sector_network:
         )
     script:
         scripts("prepare_sector_network.py")
+
+
+rule build_pcipmi_projects:
+    params:
+        line_length_factor=config_provider("lines", "length_factor"),
+    input:
+        network=resources("networks/base_s_{clusters}_elec_{opts}.nc"), 
+        regions_onshore=resources("regions_onshore_base_s_{clusters}.geojson"),
+        regions_offshore=resources("regions_offshore_base_s_{clusters}.geojson"),
+        scope=resources("europe_shape.geojson"),
+        links_co2_pipeline = "data/pcipmi_projects/links_co2_pipeline.geojson",
+        links_h2_pipeline = "data/pcipmi_projects/links_h2_pipeline.geojson",
+        stores_co2 = "data/pcipmi_projects/stores_co2.geojson",
+        stores_h2 = "data/pcipmi_projects/stores_h2.geojson",
+    output:
+        buses_pcipmi_offshore=resources(
+            "pcipmi_projects/buses_pcipmi_offshore_s_{clusters}_{opts}.csv"
+        ),
+        links_h2_pipeline=resources(
+            "pcipmi_projects/links_h2_pipeline_s_{clusters}_{opts}.csv"
+        ),
+        links_co2_pipeline=resources(
+            "pcipmi_projects/links_co2_pipeline_s_{clusters}_{opts}.csv"
+        ),
+        stores_h2=resources(
+            "pcipmi_projects/stores_h2_s_{clusters}_{opts}.csv"
+        ),
+        stores_co2=resources(
+            "pcipmi_projects/stores_co2_s_{clusters}_{opts}.csv"
+        ),
+    log:
+        logs("build_pcipmi_projects_s_{clusters}_{opts}.log"),
+    benchmark:
+        benchmarks(
+            "build_pcipmi_projects_s_{clusters}_{opts}"
+        )
+    threads: 1
+    resources:
+        mem_mb=2000,
+    conda:
+        "../envs/environment.yaml"
+    script:
+        "../scripts/build_pcipmi_projects.py"

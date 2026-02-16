@@ -62,6 +62,15 @@ def add_brownfield(
     for c in n_p.iterate_components(["Link", "Generator", "Store"]):
         attr = "e" if c.name == "Store" else "p"
 
+        ### PCI-PMI specific
+        b_pci = c.df.index.str.contains("PCI")
+        b_before_year = c.df.build_year < year
+        pci_before_year = c.df.loc[b_pci & b_before_year].index
+        pci_before_year = pci_before_year.intersection(n.static(c.name).index)
+
+        # Update capital cost to correct year
+        n.static(c.name).loc[pci_before_year, "capital_cost"] = n_p.static(c.name).loc[pci_before_year, "capital_cost"] 
+
         # first, remove generators, links and stores that track
         # CO2 or global EU values since these are already in n
         n_p.remove(c.name, c.df.index[c.df.lifetime == np.inf])
@@ -371,6 +380,9 @@ if __name__ == "__main__":
     )
 
     disable_grid_expansion_if_limit_hit(n)
+
+    # Activate inactive links commissioned by modelling year
+    b_inactive_links = n_p.links.loc[n_p.links.active==False]
 
     n.meta = dict(snakemake.config, **dict(wildcards=dict(snakemake.wildcards)))
 
