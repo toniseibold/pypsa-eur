@@ -38,6 +38,9 @@ def allocate_sequestration_potential(
     overlay[adjust_cols] = overlay[adjust_cols].multiply(overlay["share"], axis=0)
     # Clustering
     overlay.to_crs(epsg=3035, inplace=True)
+    overlay["geometry"] = overlay.geometry.make_valid()
+    overlay = overlay[overlay.geometry.notna()]
+    overlay = overlay[~overlay.geometry.is_empty]
     buffer_shapes = overlay.groupby("name").agg(
         {"geometry": lambda x: x.union_all(), "area_sqkm": "sum"}
     )

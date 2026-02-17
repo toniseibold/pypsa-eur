@@ -109,7 +109,6 @@ rule solve_sector_network_myopic:
     message:
         "Solving sector-coupled network with myopic foresight for {wildcards.clusters} clusters, {wildcards.planning_horizons} planning horizons, {wildcards.opts} electric options and {wildcards.sector_opts} sector options"
     params:
-        pcipmi_policy_paper=config_provider("pcipmi_policy_paper"),
         solving=config_provider("solving"),
         foresight=config_provider("foresight"),
         co2_sequestration_potential=config_provider(

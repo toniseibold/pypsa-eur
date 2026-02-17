@@ -1163,80 +1163,6 @@ def add_co2_atmosphere_constraint(n, snapshots):
             n.model.add_constraints(lhs <= rhs, name=f"GlobalConstraint-{name}")
 
 
-def add_co2_sequestration_min_mt_constraint(n, targets, year):
-    """
-    Adds constraints on the total CO2 sequestration target in Mt (convert to t).
-    """
-    year = int(year)
-    target = targets[year] * 1e6  # Mt to t
-
-    logger.info(
-        f"Adding constraint for {year} minimum CO2 sequestration target of {targets[year]} Mt p.a."
-    )
-    cname = "co2_sequestration_min"
-    valid_components = n.stores[(n.stores.carrier == "co2 sequestered") & (n.stores.active)].index
-    last_snapshot = (
-        n.model["Store-e"].loc[:, valid_components].indexes.get("snapshot")[-1]
-    )
-
-    nom = n.model["Store-e"].loc[last_snapshot, valid_components]
-    lhs = nom.sum()
-    rhs = target
-
-    n.model.add_constraints(lhs >= rhs, name=cname)
-
-
-def add_electrolyser_capacity_min_gw_constraint(n, targets, year):
-    """
-    Adds constraints on the total installed capacity of electrolyser links in GW (convert to MW).
-    """
-    year = int(year)
-    target = targets[year] * 1e3  # GW to MW
-
-    logger.info(f"Adding constraint for total electrolyser target of {targets[year]} GW.")
-    cname = "electrolyser_capacity_min"
-
-    existing_capacity = n.links[(n.links.carrier == "H2 Electrolysis") & (n.links.p_nom_extendable == False)].p_nom.sum()
-
-    valid_components = n.links[(n.links.carrier == "H2 Electrolysis") & (n.links.p_nom_extendable == True)].index
-
-    if not valid_components.empty:
-        nom = n.model["Link-p_nom"].loc[valid_components]
-        lhs = nom.sum()
-        rhs = target-existing_capacity
-
-        n.model.add_constraints(lhs >= rhs, name="cname")
-    else:
-        logger.warning(
-            f"No electrolyser links found for {year}. Skipping constraint addition."
-        )
-        return
-
-
-def add_h2_production_min_mt_constraint(n, targets, year):
-    """
-    Adds constraints on the minimum H2 production target in Mt (convert to MWh).
-    """
-    year = int(year)
-    target = targets[year] * 1e6  # Mt to t
-    energy_content_h2 = 33.33  # MWh/t
-    target_mwh = target * energy_content_h2
-    logger.info(
-        f"Adding constraint for total H2 production target of {targets[year]} Mt p.a. equivalent to {target_mwh} MWh p.a."
-    )
-    cname = "h2_production_min"
-    valid_components = n.links[n.links.carrier == "H2 Electrolysis"].index
-
-    lhs = (
-        n.model["Link-p"].loc[:, valid_components]
-        * n.links.loc[valid_components].efficiency
-        * n.snapshot_weightings.generators
-    ).sum()
-    rhs = target_mwh
-
-    n.model.add_constraints(lhs >= rhs, name=cname)
-
-
 def add_empty_co2_atmosphere_store_constraint(n):
     """
     Ensures that the CO2 atmosphere store at the last snapshot is empty.
@@ -1319,28 +1245,6 @@ def extra_functionality(
 
     if config["sector"]["imports"]["enable"]:
         add_import_limit_constraint(n, snapshots)
-
-    if config["pcipmi_policy_paper"]:
-        if config["pcipmi_policy_paper"]["co2_sequestration_min_mt"]["enable"]:
-            add_co2_sequestration_min_mt_constraint(
-                n,
-                config["pcipmi_policy_paper"]["co2_sequestration_min_mt"]["targets"],
-                planning_horizons,
-            )
-
-        if config["pcipmi_policy_paper"]["electrolyser_capacity_min_gw"]["enable"]:
-            add_electrolyser_capacity_min_gw_constraint(
-                n, 
-                config["pcipmi_policy_paper"]["electrolyser_capacity_min_gw"]["targets"],
-                planning_horizons,
-            )
-
-        if config["pcipmi_policy_paper"]["h2_production_min_mt"]["enable"]:
-            add_h2_production_min_mt_constraint(
-                n, 
-                config["pcipmi_policy_paper"]["h2_production_min_mt"]["targets"],
-                planning_horizons,
-            )
 
     if additional_settings.get("empty_co2_atmosphere_store_constraint", False):
         add_empty_co2_atmosphere_store_constraint(n)
@@ -1543,7 +1447,6 @@ if __name__ == "__main__":
 
     solve_opts = snakemake.params.solving["options"]
     cf_solving = snakemake.params.solving["options"]
-    pcipmi_policy_paper = snakemake.params["pcipmi_policy_paper"]
 
     np.random.seed(solve_opts.get("seed", 123))
 

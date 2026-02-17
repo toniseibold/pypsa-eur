@@ -716,7 +716,7 @@ def add_eu_bus(n, x=-5.5, y=46):
 
 
 def add_co2_tracking(
-    n, costs, options, carrier_networks, sequestration_potential_file=None, co2_price: float = 0.0, planning_horizons=None
+    n, costs, options, carrier_networks, sequestration_potential_file=None, co2_price: float = 0.0, planning_horizons=None, investment_year=None
 ):
     """
     Add CO2 tracking components to the network including atmospheric CO2,
@@ -801,7 +801,7 @@ def add_co2_tracking(
     )
     n.add("Carrier", "co2 stored")
 
-    if options["regional_co2_sequestration_potential"]["enable"]:
+    if options["regional_co2_sequestration_potential"]["enable"] and investment_year > 2025:
         if sequestration_potential_file is None:
             raise ValueError(
                 "sequestration_potential_file must be provided when "
@@ -895,7 +895,7 @@ def add_co2_tracking(
             carrier="co2 sequestered",
             build_year=planning_horizons[0],
         )
-    else:
+    elif investment_year > 2025:
         # this tracks CO2 sequestered, e.g. underground
         sequestration_buses = pd.Index(spatial.co2.nodes).str.replace(
             " stored", " sequestered"
@@ -6679,9 +6679,9 @@ if __name__ == "__main__":
             opts="",
             clusters="adm",
             sector_opts="",
-            planning_horizons="2030",
-            configfiles="config/pcipmi.config.yaml",
-            run="central-planning",
+            planning_horizons="2035",
+            configfiles="config/co2.config.yaml",
+            run="frozen_H2_28",
         )
 
     configure_logging(snakemake)  # pylint: disable=E0606
@@ -6769,6 +6769,7 @@ if __name__ == "__main__":
         sequestration_potential_file=snakemake.input.sequestration_potential,
         co2_price=co2_price,
         planning_horizons=snakemake.params.planning_horizons,
+        investment_year=investment_year,
     )
 
     add_generation(
@@ -6942,10 +6943,10 @@ if __name__ == "__main__":
     if not options["electricity_transmission_grid"]:
         decentral(n)
 
-    if not carrier_networks["H2"]["enable"]:
+    if not carrier_networks["H2"]["enable"] or investment_year == 2025:
         remove_h2_network(n)
 
-    if carrier_networks["H2"]["enable"] and carrier_networks["H2"]["include"]["pcipmi"]:
+    if carrier_networks["H2"]["enable"] and carrier_networks["H2"]["include"]["pcipmi"] and investment_year > 2025:
         add_pcipmi_h2_buses(
             n,
             costs,
@@ -6959,7 +6960,7 @@ if __name__ == "__main__":
             "H2 pipeline",
             carrier_networks,
         )
-    if pcipmi_projects["enable"] and "stores_h2" in pcipmi_projects["include"]:
+    if pcipmi_projects["enable"] and "stores_h2" in pcipmi_projects["include"] and investment_year > 2025:
         add_pcipmi_stores(
             n, 
             snakemake.input.stores_h2,
@@ -6968,14 +6969,14 @@ if __name__ == "__main__":
             pcipmi_projects,
             options,
         )
-    if carrier_networks["CO2"]["enable"] and carrier_networks["CO2"]["include"]["greenfield"]:
+    if carrier_networks["CO2"]["enable"] and carrier_networks["CO2"]["include"]["greenfield"] and investment_year > 2025:
         add_co2_network(
             n,
             costs,
             cost_factor=carrier_networks["CO2"]["options"]["cost_factor"],
         )
 
-    if carrier_networks["CO2"]["enable"] and carrier_networks["CO2"]["include"]["pcipmi"]:
+    if carrier_networks["CO2"]["enable"] and carrier_networks["CO2"]["include"]["pcipmi"] and investment_year > 2025:
         add_pcipmi_co2_buses(
             n,
             spatial_pcipmi.nodes,
@@ -6988,7 +6989,7 @@ if __name__ == "__main__":
             "CO2 pipeline",
             carrier_networks,
         )
-    if pcipmi_projects["enable"] and "stores_co2" in pcipmi_projects["include"]:
+    if pcipmi_projects["enable"] and "stores_co2" in pcipmi_projects["include"] and investment_year > 2025:
 
         add_pcipmi_stores(
             n, 
