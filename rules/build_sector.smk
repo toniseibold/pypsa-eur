@@ -1723,6 +1723,9 @@ rule prepare_sector_network:
             if config_provider("sector", "district_heating", "ates", "enable")(w)
             else []
         ),
+        industry_sector_ratios=resources(
+            "industry_sector_ratios_{planning_horizons}.csv"
+        ),
         pcipmi_links_co2_pipeline=lambda w: (
             resources("pcipmi_projects/links_co2_pipeline_s_{clusters}_{opts}.csv")
             if (

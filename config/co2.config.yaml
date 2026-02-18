@@ -18,11 +18,11 @@ remote:
 run:
   prefix: "transfer_eur"
   name:
-    # - endo_H2
-    # - frozen_H2_28
-    # - no_co2_network
-    # - onshore_sequestration
-    # - pcipmi_H2_+
+    - endo_H2
+    - frozen_H2_28
+    - no_co2_network
+    - onshore_sequestration
+    - pcipmi_H2_+
     - seq_50
   scenarios:
     enable: true
@@ -211,6 +211,7 @@ pcipmi_projects:
 existing_capacities:
   grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025]
   grouping_years_heat: [1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2019] # heat grouping years >= baseyear will be ignored
+  grouping_years_industry: [1995, 2000, 2005, 2010, 2015, 2020, 2025]
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#sector
 sector:
@@ -239,7 +240,7 @@ sector:
   co2_sequestration_potential:
     2025: 0
     2035: 100
-  co2_sequestration_cost: 15
+  co2_sequestration_cost: 35
   co2_sequestration_lifetime: 50
   co2_spatial: true
   gas_network: false
@@ -251,6 +252,16 @@ sector:
   biomass_spatial: true
   biomass_transport: false
   biogas_upgrading_cc: false
+  ammonia: regional
+  methanol:
+    regional_methanol_demand: true
+  endogenous_sectors:
+    - steel
+    - cement
+    - ammonia
+    - methanol
+  bof_retirement_date: true
+  industry_relocation: false
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#clustering
 clustering:
@@ -288,3 +299,15 @@ solving:
     assign_all_duals: true
     custom_extra_functionality: ../data/custom_extra_functionality.py # Has to be set to false, otherwise the imported solve_network function will not work correctly
     noisy_costs: true
+    skip_iterations: false
+    post_discretization:
+      enable: true
+      link_unit_size:
+        DC: 1000
+        H2 pipeline: 4700
+        CO2 pipeline: 1328 # pipeline diamter 70cm able to transport 1328 t/h
+      link_threshold:
+        DC: 0.3
+        H2 pipeline: 0.05
+        CO2 pipeline: 0.1
+      fractional_last_unit_size: true
