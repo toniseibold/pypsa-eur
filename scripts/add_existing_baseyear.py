@@ -1040,7 +1040,7 @@ def add_existing_cement_plants(n):
         .div(8760)
         .mul(1e6)
         .values,
-        capital_cost=costs.at["cement finishing", "capital_cost"] / gas_input,
+        capital_cost=costs.at["cement finishing", "capital_cost"] / clinker_input,
         efficiency=1/clinker_input,
         efficiency2=-electricity_input,
         build_year=cement.grouping_year.to_list(),

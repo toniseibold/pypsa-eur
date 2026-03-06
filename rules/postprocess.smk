@@ -279,6 +279,8 @@ rule make_summary:
         + "csvs/individual/market_values_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
         metrics=RESULTS
         + "csvs/individual/metrics_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        paper_metrics=RESULTS
+        + "paper_metrics_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
     threads: 1
     resources:
         mem_mb=8000,

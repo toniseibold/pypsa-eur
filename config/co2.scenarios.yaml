@@ -1,4 +1,4 @@
-endo_H2:
+endogenous:
   carrier_networks:
     CO2:
       enable: true
@@ -10,8 +10,10 @@ endo_H2:
       include:
         greenfield: true
         pcipmi: false
+  pcipmi_projects:
+    enable: false
 
-frozen_H2_28:
+frozen_H2_29:
   carrier_networks:
     CO2:
       enable: true
@@ -21,7 +23,7 @@ frozen_H2_28:
       options:
         cost_factor: 1.0
         length_factor: 1.0
-        delay: 7
+        delay: 6
     H2:
       enable: true
       include:
@@ -32,7 +34,14 @@ frozen_H2_28:
         pcipmi: []
       p_nom_max: .inf
       options:
-        delay: 7
+        delay: 6
+  pcipmi_projects:
+    enable: true
+    include:
+      - stores_co2
+      - stores_h2
+    options:
+      delay: 6
 
 no_co2_network:
   carrier_networks:
@@ -42,7 +51,18 @@ no_co2_network:
         greenfield: false
         pcipmi: false
 
-onshore_sequestration:
+onshore_seq_endo:
+  carrier_networks:
+    CO2:
+      enable: true
+      include:
+        greenfield: true
+        pcipmi: false
+    H2:
+      enable: true
+      include:
+        greenfield: true
+        pcipmi: false
   sector:
     regional_co2_sequestration_potential:
       enable: true
@@ -56,7 +76,7 @@ onshore_sequestration:
       max_size: .inf # 25
       years_of_storage: 25
 
-pcipmi_H2_+:
+pcipmi:
   carrier_networks:
     CO2:
       enable: true
@@ -70,7 +90,7 @@ pcipmi_H2_+:
       options:
         cost_factor: 1.0
         length_factor: 1.0
-        delay: 7
+        delay: 0
     H2:
       enable: true
       include:
@@ -81,10 +101,11 @@ pcipmi_H2_+:
         pcipmi: []
       p_nom_max: .inf
       options:
-        delay: 7
+        delay: 0
 
 seq_50:
   sector:
     co2_sequestration_potential:
-      2025: 0
-      2035: 50
+      2030: 20
+      2040: 90
+      2050: 250

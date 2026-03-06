@@ -1177,7 +1177,7 @@ def add_empty_co2_atmosphere_store_constraint(n):
 
 
 def extra_functionality(
-    n: pypsa.Network, snapshots: pd.DatetimeIndex, planning_horizons: str | None = None, additional_settings: dict = None,
+    n: pypsa.Network, snapshots: pd.DatetimeIndex, planning_horizons: str | None = None, additional_settings: dict = {},
 ) -> None:
     """
     Add custom constraints and functionality.
@@ -1374,6 +1374,7 @@ def collect_kwargs(
 
         if cf_solving["post_discretization"].get("enable", False):
             logger.info("Add post-discretization parameters.")
+            cf_solving["post_discretization"].pop("enable", None)
             all_kwargs.update(cf_solving["post_discretization"])
 
         return all_kwargs, {}
@@ -1436,10 +1437,10 @@ if __name__ == "__main__":
             "solve_sector_network_myopic",
             opts="",
             clusters="adm",
-            configfiles="config/pcipmi.config.yaml",
+            configfiles="config/co2.config.yaml",
             sector_opts="",
-            planning_horizons="2030",
-            run="central-planning",
+            planning_horizons="2025",
+            run="frozen_H2_28",
         )
     configure_logging(snakemake)
     set_scenario_config(snakemake)
@@ -1467,10 +1468,6 @@ if __name__ == "__main__":
     # Determine solve mode
     rolling_horizon = cf_solving.get("rolling_horizon", False)
     skip_iterations = cf_solving.get("skip_iterations", False)
-
-    if not n.lines.s_nom_extendable.any():
-        skip_iterations = True
-        logger.info("No expandable lines found. Skipping iterative solving.")
 
     logging_frequency = snakemake.config.get("solving", {}).get(
         "mem_logging_frequency", 30

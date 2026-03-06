@@ -823,7 +823,7 @@ def add_co2_tracking(
     )
     n.add("Carrier", "co2 stored")
 
-    if options["regional_co2_sequestration_potential"]["enable"] and investment_year > 2025:
+    if options["regional_co2_sequestration_potential"]["enable"]:
         if sequestration_potential_file is None:
             raise ValueError(
                 "sequestration_potential_file must be provided when "
@@ -917,7 +917,7 @@ def add_co2_tracking(
             carrier="co2 sequestered",
             build_year=planning_horizons[0],
         )
-    elif investment_year > 2025:
+    else:
         # this tracks CO2 sequestered, e.g. underground
         sequestration_buses = pd.Index(spatial.co2.nodes).str.replace(
             " stored", " sequestered"
@@ -1857,6 +1857,7 @@ def add_h2_gas_infrastructure(
     spatial,
     options,
     carrier_networks=None,
+    investment_year=None,
 ):
     """
     Add hydrogen and gas infrastructure to the network.
@@ -2177,7 +2178,7 @@ def add_h2_gas_infrastructure(
             lifetime=costs.at["H2 (g) pipeline repurposed", "lifetime"],
         )
 
-    if carrier_networks["H2"]["enable"] and carrier_networks["H2"]["include"]["greenfield"]:
+    if (carrier_networks["H2"]["enable"] and carrier_networks["H2"]["include"]["greenfield"]) or investment_year==2045:
         logger.info("Add options for new hydrogen pipelines.")
 
         h2_pipes = create_network_topology(
@@ -5335,34 +5336,34 @@ def add_industry(
             carrier="steel",
             p_set=p_set,
         )
-        if investment_year > 2025:
-            electricity_input = costs.at["hydrogen direct iron reduction furnace", "electricity-input"]
-            hydrogen_input = costs.at["hydrogen direct iron reduction furnace", "hydrogen-input"]
 
-            marginal_cost = (
-                costs.at["iron ore DRI-ready", "commodity"]
-                * costs.at["hydrogen direct iron reduction furnace", "ore-input"]
-                / electricity_input
-            )
-            n.add("Carrier", "H2 DRI")
+        electricity_input = costs.at["hydrogen direct iron reduction furnace", "electricity-input"]
+        hydrogen_input = costs.at["hydrogen direct iron reduction furnace", "hydrogen-input"]
 
-            n.add(
-                "Link",
-                spatial.nodes,
-                suffix=" H2 DRI",
-                carrier="H2 DRI",
-                capital_cost=costs.at["hydrogen direct iron reduction furnace", "capital_cost"]
-                / electricity_input,
-                marginal_cost=marginal_cost,
-                p_nom=0,
-                p_nom_extendable=True,
-                bus0=spatial.nodes,
-                bus1=spatial.hbi.nodes,
-                bus2=spatial.h2.nodes,
-                efficiency=1 / electricity_input,
-                efficiency2=-hydrogen_input / electricity_input,
-                lifetime=costs.at["hydrogen direct iron reduction furnace", "lifetime"],
-            )
+        marginal_cost = (
+            costs.at["iron ore DRI-ready", "commodity"]
+            * costs.at["hydrogen direct iron reduction furnace", "ore-input"]
+            / electricity_input
+        )
+        n.add("Carrier", "H2 DRI")
+
+        n.add(
+            "Link",
+            spatial.nodes,
+            suffix=" H2 DRI",
+            carrier="H2 DRI",
+            capital_cost=costs.at["hydrogen direct iron reduction furnace", "capital_cost"]
+            / electricity_input,
+            marginal_cost=marginal_cost,
+            p_nom=0,
+            p_nom_extendable=True,
+            bus0=spatial.nodes,
+            bus1=spatial.hbi.nodes,
+            bus2=spatial.h2.nodes,
+            efficiency=1 / electricity_input,
+            efficiency2=-hydrogen_input / electricity_input,
+            lifetime=costs.at["hydrogen direct iron reduction furnace", "lifetime"],
+        )
                 # HBI to steel via electric arc furnace
         electricity_input = costs.at["electric arc furnace", "electricity-input"]
         n.add("Carrier", "EAF")
@@ -5475,45 +5476,44 @@ def add_industry(
             p_nom_extendable=True,
         )
 
-        if investment_year > 2025:
-            # Assumption: enough waste heat to recover sorbent
-            capture_rate = costs.at["steel carbon capture retrofit", "capture_rate"]
-            electricity_input=costs.at["steel carbon capture retrofit", "electricity-input"] # MWh/t_CO2
-            n.add("Carrier", "steel emission CC")
-            n.add(
-                "Link",
-                spatial.nodes,
-                suffix=" gas DRI emission CC",
-                carrier="steel emission CC",
-                capital_cost=costs.at["steel carbon capture retrofit", "capital_cost"],
-                bus0=spatial.nodes + " gas DRI emission",
-                bus1=spatial.co2.nodes,
-                bus2=spatial.nodes,
-                bus3="co2 atmosphere",
-                efficiency=capture_rate,
-                efficiency2=-electricity_input,
-                efficiency3=1-capture_rate,
-                p_nom=0,
-                p_nom_extendable=True,
-                lifetime=costs.at["steel carbon capture retrofit", "lifetime"],
-            )
-            n.add(
-                "Link",
-                spatial.nodes,
-                suffix=" BOF emission CC",
-                carrier="steel emission CC",
-                capital_cost=costs.at["steel carbon capture retrofit", "capital_cost"],
-                bus0=spatial.nodes + " BOF emission",
-                bus1=spatial.co2.nodes,
-                bus2=spatial.nodes,
-                bus3="co2 atmosphere",
-                efficiency=capture_rate,
-                efficiency2=-electricity_input,
-                efficiency3=1-capture_rate,
-                p_nom=0,
-                p_nom_extendable=True,
-                lifetime=costs.at["steel carbon capture retrofit", "lifetime"],
-            )
+        # Assumption: enough waste heat to recover sorbent
+        capture_rate = costs.at["steel carbon capture retrofit", "capture_rate"]
+        electricity_input=costs.at["steel carbon capture retrofit", "electricity-input"] # MWh/t_CO2
+        n.add("Carrier", "steel emission CC")
+        n.add(
+            "Link",
+            spatial.nodes,
+            suffix=" gas DRI emission CC",
+            carrier="steel emission CC",
+            capital_cost=costs.at["steel carbon capture retrofit", "capital_cost"],
+            bus0=spatial.nodes + " gas DRI emission",
+            bus1=spatial.co2.nodes,
+            bus2=spatial.nodes,
+            bus3="co2 atmosphere",
+            efficiency=capture_rate,
+            efficiency2=-electricity_input,
+            efficiency3=1-capture_rate,
+            p_nom=0,
+            p_nom_extendable=True,
+            lifetime=costs.at["steel carbon capture retrofit", "lifetime"],
+        )
+        n.add(
+            "Link",
+            spatial.nodes,
+            suffix=" BOF emission CC",
+            carrier="steel emission CC",
+            capital_cost=costs.at["steel carbon capture retrofit", "capital_cost"],
+            bus0=spatial.nodes + " BOF emission",
+            bus1=spatial.co2.nodes,
+            bus2=spatial.nodes,
+            bus3="co2 atmosphere",
+            efficiency=capture_rate,
+            efficiency2=-electricity_input,
+            efficiency3=1-capture_rate,
+            p_nom=0,
+            p_nom_extendable=True,
+            lifetime=costs.at["steel carbon capture retrofit", "lifetime"],
+        )
 
     if "cement" in snakemake.params.sector["endogenous_sectors"]:
         # add cement processes
@@ -5650,34 +5650,33 @@ def add_industry(
             bus2=spatial.nodes,
             carrier="cement finishing",
             p_nom_extendable=True,
-            capital_cost=costs.at["cement finishing", "capital_cost"] / gas_input,
+            capital_cost=costs.at["cement finishing", "capital_cost"] / clinker_input,
             efficiency=1/clinker_input,
             efficiency2=-electricity_input,
             lifetime=costs.at["cement finishing", "lifetime"],
         )
 
-        if investment_year > 2025:
-            capture_rate = costs.at["cement carbon capture retrofit", "capture_rate"]
-            electricity_input=costs.at["cement carbon capture retrofit", "electricity-input"]
+        capture_rate = costs.at["cement carbon capture retrofit", "capture_rate"]
+        electricity_input=costs.at["cement carbon capture retrofit", "electricity-input"]
 
-            # add post combustion retrofit
-            n.add("Carrier", "cement emission CC")
-            n.add(
-                "Link",
-                spatial.cement.nodes,
-                suffix = " CC",
-                bus0=spatial.cement.nodes + " emission",
-                bus1=spatial.co2.nodes,
-                bus2=spatial.nodes,
-                bus3="co2 atmosphere",
-                carrier="cement emission CC",
-                p_nom_extendable=True,
-                capital_cost=costs.at["cement carbon capture retrofit", "capital_cost"],
-                efficiency=costs.at["cement carbon capture retrofit", "capture_rate"],
-                efficiency2=-electricity_input,
-                efficiency3=1-costs.at["cement carbon capture retrofit", "capture_rate"],
-                lifetime=costs.at["cement carbon capture retrofit", "lifetime"],
-            )
+        # add post combustion retrofit
+        n.add("Carrier", "cement emission CC")
+        n.add(
+            "Link",
+            spatial.cement.nodes,
+            suffix = " CC",
+            bus0=spatial.cement.nodes + " emission",
+            bus1=spatial.co2.nodes,
+            bus2=spatial.nodes,
+            bus3="co2 atmosphere",
+            carrier="cement emission CC",
+            p_nom_extendable=True,
+            capital_cost=costs.at["cement carbon capture retrofit", "capital_cost"],
+            efficiency=costs.at["cement carbon capture retrofit", "capture_rate"],
+            efficiency2=-electricity_input,
+            efficiency3=1-costs.at["cement carbon capture retrofit", "capture_rate"],
+            lifetime=costs.at["cement carbon capture retrofit", "lifetime"],
+        )
         n.add(
             "Link",
             spatial.cement.nodes,
@@ -5690,34 +5689,33 @@ def add_industry(
             efficiency=1,
         )
 
-    if investment_year > 2025:
-        # add methanol-to-olefins/aromatics
-        tech = "methanol-to-olefins/aromatics"
+    # add methanol-to-olefins/aromatics
+    tech = "methanol-to-olefins/aromatics"
 
-        naphtha_per_t_hvc = 12.622  # MWh per tonne of HVC (taken from sector ratios)
+    naphtha_per_t_hvc = 12.622  # MWh per tonne of HVC (taken from sector ratios)
 
-        process_emissions = (
-            costs.at[tech, "carbondioxide-output"] / costs.at[tech, "methanol-input"]
-        )
-        n.add("Carrier", "methanol-to-olefins/aromatics")
+    process_emissions = (
+        costs.at[tech, "carbondioxide-output"] / costs.at[tech, "methanol-input"]
+    )
+    n.add("Carrier", "methanol-to-olefins/aromatics")
 
-        n.add(
-            "Link",
-            nodes,
-            suffix=f" {tech}",
-            bus0=spatial.methanol.nodes,
-            bus1=spatial.oil.naphtha,
-            bus2=nodes,
-            bus3=spatial.co2.process_emissions,
-            efficiency=1
-                / costs.at[tech, "methanol-input"]
-                * naphtha_per_t_hvc,  # because MtO produces t HVC not MWh no MWh HVC
-            efficiency2=-costs.at[tech, "electricity-input"]
-                / costs.at[tech, "methanol-input"],
-            efficiency3=process_emissions,
-            carrier=tech,
-            p_nom_extendable=True,
-        )
+    n.add(
+        "Link",
+        nodes,
+        suffix=f" {tech}",
+        bus0=spatial.methanol.nodes,
+        bus1=spatial.oil.naphtha,
+        bus2=nodes,
+        bus3=spatial.co2.process_emissions,
+        efficiency=1
+            / costs.at[tech, "methanol-input"]
+            * naphtha_per_t_hvc,  # because MtO produces t HVC not MWh no MWh HVC
+        efficiency2=-costs.at[tech, "electricity-input"]
+            / costs.at[tech, "methanol-input"],
+        efficiency3=process_emissions,
+        carrier=tech,
+        p_nom_extendable=True,
+    )
 
     costs.at["grey methanol synthesis", "efficiency"] = 1/costs.at["grey methanol synthesis", "gas-input"]
     # grey methanol
@@ -6954,6 +6952,7 @@ def add_pcipmi_links(
     costs: pd.DataFrame,
     carrier: str,
     carrier_networks: dict,
+    delay: int,
 ) -> None:
     """
     Add PCI-PMI links to the network.
@@ -6961,12 +6960,12 @@ def add_pcipmi_links(
     if carrier == "H2 pipeline":
         capital_cost_carrier = costs.at["H2 (g) pipeline", "capital_cost"]
         lifetime_carrier = costs.at["H2 (g) pipeline", "lifetime"]
-        delay = carrier_networks["H2"]["options"]["delay"]
+        # delay = carrier_networks["H2"]["options"]["delay"]
 
     if carrier == "CO2 pipeline":
         capital_cost_carrier = costs.at["CO2 pipeline", "capital_cost"]
         lifetime_carrier = costs.at["CO2 pipeline", "lifetime"]
-        delay = carrier_networks["CO2"]["options"]["delay"]
+        # delay = carrier_networks["CO2"]["options"]["delay"]
 
     projects = pd.read_csv(links_path, index_col=0, dtype={"bus0": str, "bus1": str})
 
@@ -7001,7 +7000,7 @@ def add_pcipmi_links(
         f"- replacing {len(duplicates)} existing {carrier}s with PCI/PMI projects of the same bus0 and bus1"
     )
     n.links = n.links.drop(duplicates)
-
+    projects["carrier"] +=" pcipmi"
     n.add(
         "Link",
         projects.index,
@@ -7110,6 +7109,7 @@ def add_pcipmi_stores(
     costs: pd.DataFrame,
     pcipmi_projects: dict,
     options: dict,
+    delay: int,
 ) -> None:
     stores = pd.read_csv(stores_path, index_col=0)
     carrier = stores.carrier.unique()[0]
@@ -7117,7 +7117,7 @@ def add_pcipmi_stores(
     # Adding stores
     logger.info(f"Adding PCI/PMI stores: Carrier {carrier}.")
 
-    delay = pcipmi_projects["options"]["delay"]
+    # delay = pcipmi_projects["options"]["delay"]
     # Add delay
     stores["build_year"] = stores["build_year"] + delay
     logger.info(f"Adding a delay of {delay} years to the build year.")
@@ -7234,6 +7234,22 @@ def update_link_extendability(
             n.links.loc[b_is_h2_pipeline & b_is_pcipmi & ~b_is_national, "build_year"] = 0  
             # TODO master: make PyPSA-Eur more robust wrt. to build_year zero for myopic.
 
+delay_pd = pd.DataFrame(
+    data=[[0, 0, 0],
+          [1, 11, 0],
+          [1, 5, 0],
+          [0, 0, 0],
+          [0, 0, 0],
+          [1, 5, 0]],
+    index=pd.Index(["endogenous",
+                    "frozen_H2_29",
+                    "no_co2_network",
+                    "onshore_seq_endo",
+                    "pcipmi",
+                    "seq_50"]),
+    columns=pd.Index([2030, 2040, 2050]),
+    )
+
 
 
 if __name__ == "__main__":
@@ -7245,9 +7261,9 @@ if __name__ == "__main__":
             opts="",
             clusters="adm",
             sector_opts="",
-            planning_horizons="2025",
+            planning_horizons="2050",
             configfiles="config/co2.config.yaml",
-            run="seq_50",
+            run="frozen_H2_29",
         )
 
     configure_logging(snakemake)  # pylint: disable=E0606
@@ -7359,6 +7375,7 @@ if __name__ == "__main__":
         spatial=spatial,
         options=options,
         carrier_networks=carrier_networks,
+        investment_year=investment_year,
     )
 
     # Hydrogen already implemented in add_h2_gas_infrastructure
@@ -7509,10 +7526,10 @@ if __name__ == "__main__":
     if not options["electricity_transmission_grid"]:
         decentral(n)
 
-    if not carrier_networks["H2"]["enable"] or investment_year == 2025:
+    if not carrier_networks["H2"]["enable"] and not investment_year == 2050:
         remove_h2_network(n)
 
-    if carrier_networks["H2"]["enable"] and carrier_networks["H2"]["include"]["pcipmi"] and investment_year > 2025:
+    if (carrier_networks["H2"]["enable"] and carrier_networks["H2"]["include"]["pcipmi"]) or investment_year == 2050:
         add_pcipmi_h2_buses(
             n,
             costs,
@@ -7525,8 +7542,9 @@ if __name__ == "__main__":
             costs,
             "H2 pipeline",
             carrier_networks,
+            delay=delay_pd.loc[snakemake.wildcards.run, investment_year],
         )
-    if pcipmi_projects["enable"] and "stores_h2" in pcipmi_projects["include"] and investment_year > 2025:
+    if (pcipmi_projects["enable"] and "stores_h2" in pcipmi_projects["include"]) or investment_year == 2050:
         add_pcipmi_stores(
             n, 
             snakemake.input.stores_h2,
@@ -7534,15 +7552,16 @@ if __name__ == "__main__":
             costs,
             pcipmi_projects,
             options,
+            delay=delay_pd.loc[snakemake.wildcards.run, investment_year],
         )
-    if carrier_networks["CO2"]["enable"] and carrier_networks["CO2"]["include"]["greenfield"] and investment_year > 2025:
+    if (carrier_networks["CO2"]["enable"] and carrier_networks["CO2"]["include"]["greenfield"]) or investment_year==2050:
         add_co2_network(
             n,
             costs,
             cost_factor=carrier_networks["CO2"]["options"]["cost_factor"],
         )
 
-    if carrier_networks["CO2"]["enable"] and carrier_networks["CO2"]["include"]["pcipmi"] and investment_year > 2025:
+    if (carrier_networks["CO2"]["enable"] and carrier_networks["CO2"]["include"]["pcipmi"]) or investment_year == 2050:
         add_pcipmi_co2_buses(
             n,
             spatial_pcipmi.nodes,
@@ -7554,8 +7573,9 @@ if __name__ == "__main__":
             costs,
             "CO2 pipeline",
             carrier_networks,
+            delay=delay_pd.loc[snakemake.wildcards.run, investment_year],
         )
-    if pcipmi_projects["enable"] and "stores_co2" in pcipmi_projects["include"] and investment_year > 2025:
+    if (pcipmi_projects["enable"] and "stores_co2" in pcipmi_projects["include"]) or investment_year == 2050:
 
         add_pcipmi_stores(
             n, 
@@ -7564,6 +7584,7 @@ if __name__ == "__main__":
             costs,
             pcipmi_projects,
             options,
+            delay=delay_pd.loc[snakemake.wildcards.run, investment_year],
         )
 
     # Drop PCI-PMI offshore elec buses

@@ -320,3 +320,33 @@ if __name__ == "__main__":
 
     for output in OUTPUTS:
         globals()["calculate_" + output](n).to_csv(snakemake.output[output])
+
+    # get totex
+    totex = n.statistics.capex().sum() + n.statistics.opex().sum()
+    # get TWkm H2
+    h2_endo = n.links[(n.links.carrier == "H2 pipeline") & (n.links.active)].index
+    if not h2_endo.empty:
+        h2_cap_endo = n.links.loc[h2_endo, "p_nom_opt"].mul(n.links.loc[h2_endo, "length"]).sum()
+    # get Mt/h km CO2
+    co2_endo = n.links[(n.links.carrier == "CO2 pipeline") & (n.links.active) & ~(n.links.index.str.contains("offshore"))].index
+    if not co2_endo.empty:
+        co2_cap_endo = n.links.loc[co2_endo, "p_nom_opt"].mul(n.links.loc[co2_endo, "length"]).sum()
+    # get pci/pmi TWkm H2
+    h2_pci = n.links[(n.links.carrier == "H2 pipeline pcipmi") & (n.links.active)].index
+    if not h2_pci.empty:
+        h2_cap_pci = n.links.loc[h2_pci, "p_nom_opt"].mul(n.links.loc[h2_pci, "length"]).sum()
+    # get pci/pmi Mt/h km CO2
+    co2_pci = n.links[(n.links.carrier == "CO2 pipeline pcipmi") & (n.links.active)].index
+    if not co2_pci.empty:
+        co2_cap_pci = n.links.loc[co2_pci, "p_nom_opt"].mul(n.links.loc[co2_pci, "length"]).sum()
+
+    summary = pd.Series(
+        {
+            "totex": totex,
+            "h2_endo_TWkm": h2_cap_endo if not h2_endo.empty else 0,
+            "co2_endo_Mt_h_km": co2_cap_endo if not co2_endo.empty else 0,
+            "h2_pci_TWkm": h2_cap_pci if not h2_pci.empty else 0,
+            "co2_pci_Mt_h_km": co2_cap_pci if not co2_pci.empty else 0,
+        }
+    )
+    summary.to_csv(snakemake.output.paper_metrics)

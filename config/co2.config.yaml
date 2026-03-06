@@ -18,11 +18,11 @@ remote:
 run:
   prefix: "transfer_eur"
   name:
-    - endo_H2
-    - frozen_H2_28
+    - endogenous
+    - frozen_H2_29
     - no_co2_network
-    - onshore_sequestration
-    - pcipmi_H2_+
+    - onshore_seq_endo
+    - pcipmi
     - seq_50
   scenarios:
     enable: true
@@ -41,95 +41,34 @@ foresight: myopic
 solve_operations:
   resample_temporal_resolution: false
   columns:
-    - ops__ghg_target
-    - ops__no_pipes
-    - ops__delay_pipes
-    # - ops__no_pipes_emission_price
+    - ops_industry_demand
+    - ops_sequ_potential
+    - ops_meoh_import
   definitions:
-    ops__ghg_target:
-      options:
-        allow_load_shedding: false
-        fix_minimum_investments: true # all assets except for pipelines
-        fix_all_capacities: false # ["Generator", "Line", "Link", "Store"]
-        fix_optimal_pipeline_capacities: true # CO2 and H2 pipelines
-        remove_co2_pipelines: false
-        remove_onshore_co2_pipelines: false
-        remove_h2_pipelines: false
-        remove_co2_sequestration: false
-        use_emission_price: false
-        delay_onshore_co2_pipelines: false
-        delay_h2_pipelines: false
-      overwrite_config:
-        pcipmi_policy_paper:
-          co2_sequestration_min_mt:
-            enable: false
-          h2_production_min_mt:
-            enable: false
-          electrolyser_capacity_min_gw:
-            enable: false
-    ops__no_pipes:
-      options:
-        allow_load_shedding: 10000 # EUR/MWh
-        fix_minimum_investments: true # all assets except for pipelines
-        fix_all_capacities: false # ["Generator", "Line", "Link", "Store"]
-        fix_optimal_pipeline_capacities: true # CO2 and H2 pipelines
-        remove_co2_pipelines: false
-        remove_onshore_co2_pipelines: true
-        remove_h2_pipelines: true
-        remove_co2_sequestration: false
-        use_emission_price: false
-        delay_onshore_co2_pipelines: false
-        delay_h2_pipelines: false
-      overwrite_config:
-        pcipmi_policy_paper:
-          co2_sequestration_min_mt:
-            enable: true
-          h2_production_min_mt:
-            enable: true
-          electrolyser_capacity_min_gw:
-            enable: false
-    ops__delay_pipes:
-      options:
-        allow_load_shedding: 10000 # EUR/MWh
-        fix_minimum_investments: true # all assets except for pipelines
-        fix_all_capacities: false # ["Generator", "Line", "Link", "Store"]
-        fix_optimal_pipeline_capacities: true # CO2 and H2 pipelines
-        remove_co2_pipelines: false
-        remove_onshore_co2_pipelines: false
-        remove_h2_pipelines: false
-        remove_co2_sequestration: false
-        use_emission_price: false
-        delay_onshore_co2_pipelines: 10 # years
-        delay_h2_pipelines: 10 # years
-      overwrite_config:
-        pcipmi_policy_paper:
-          co2_sequestration_min_mt:
-            enable: true
-          h2_production_min_mt:
-            enable: true
-          electrolyser_capacity_min_gw:
-            enable: false
-    ops__no_pipes_emission_price:
-      options:
-        allow_load_shedding: 10000 # EUR/MWh
-        fix_minimum_investments: true # all assets except for pipelines
-        fix_all_capacities: false # ["Generator", "Line", "Link", "Store"]
-        fix_optimal_pipeline_capacities: true # CO2 and H2 pipelines
-        remove_co2_pipelines: false
-        remove_onshore_co2_pipelines: true
-        remove_h2_pipelines: true
-        remove_co2_sequestration: false
-        use_emission_price: true
-        delay_onshore_co2_pipelines: false
-        delay_h2_pipelines: false
-      overwrite_config:
-        pcipmi_policy_paper:
-          co2_sequestration_min_mt:
-            enable: true
-          h2_production_min_mt:
-            enable: true
-          electrolyser_capacity_min_gw:
-            enable: false
+    ops_industry_demand:
+      allow_load_shedding: 10000 # EUR/MWh
+      fix_minimum_investments: true # all assets except for pipelines
+      fix_optimal_pipeline_capacities: true # CO2 and H2 pipelines
+      # 
+      adjust_industry_demand: 1.2
+      adjust_seq_limit: false
+      allow_meoh_import: false
+    ops_sequ_potential:
+      allow_load_shedding: 10000 # EUR/MWh
+      fix_minimum_investments: true # all assets except for pipelines
+      fix_optimal_pipeline_capacities: true # CO2 and H2 pipelines
+      # 
+      adjust_industry_demand: false
+      adjust_seq_limit: 90
+      allow_meoh_import: false
+    ops_meoh_import:
+      allow_load_shedding: 10000 # EUR/MWh
+      fix_minimum_investments: true # all assets except for pipelines
+      fix_optimal_pipeline_capacities: true # CO2 and H2 pipelines
+      # 
+      adjust_industry_demand: false
+      adjust_seq_limit: false
+      allow_meoh_import: 200 # TWh industry + shipping = 291 TWh/a in 2040
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#scenario
 # Wildcard docs in https://pypsa-eur.readthedocs.io/en/latest/wildcards.html
@@ -141,8 +80,9 @@ scenario:
   sector_opts:
   - ''
   planning_horizons:
-  - 2025
-  - 2035
+  - 2030
+  - 2040
+  - 2050
 
 # docs in https://pypsa-eur.readthedocs.io/en/latest/configuration.html#countries
 countries: ['AL', 'AT', 'BA', 'BE', 'BG', 'CH', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GB', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'ME', 'MK', 'NL', 'NO', 'PL', 'PT', 'RO', 'RS', 'SE', 'SI', 'SK', 'XK']
@@ -187,7 +127,7 @@ carrier_networks:
     options:
       cost_factor: 1.0
       length_factor: 1.0
-      delay: 7
+      delay: 5
   H2:
     enable: true
     include:
@@ -198,7 +138,7 @@ carrier_networks:
       pcipmi: []
     p_nom_max: .inf
     options:
-      delay: 7
+      delay: 5
 
 pcipmi_projects:
   enable: true
@@ -206,7 +146,7 @@ pcipmi_projects:
     - stores_co2
     - stores_h2
   options:
-    delay: 0 # TONITODO
+    delay: 5
 
 existing_capacities:
   grouping_years_power: [1920, 1950, 1955, 1960, 1965, 1970, 1975, 1980, 1985, 1990, 1995, 2000, 2005, 2010, 2015, 2020, 2025]
@@ -238,8 +178,9 @@ sector:
     years_of_storage: 25
   co2_vent: true
   co2_sequestration_potential:
-    2025: 0
-    2035: 100
+    2030: 40
+    2040: 180
+    2050: 250
   co2_sequestration_cost: 35
   co2_sequestration_lifetime: 50
   co2_spatial: true
@@ -289,10 +230,10 @@ clustering:
     SE: 0.05
   temporal:
     resolution_elec: false
-    resolution_sector: 8760H # 2190seg
+    resolution_sector: 25H # 2190seg
 
 solving:
-  mem_mb: 220000 #memory in MB; 20 GB enough for 50+B+I+H2; 100 GB for 181+B+I+H2
+  mem_mb: 400000 #memory in MB; 20 GB enough for 50+B+I+H2; 100 GB for 181+B+I+H2
   memory_logging_frequency: 30 # in seconds
   runtime: 40h #runtime in humanfriendly style https://humanfriendly.readthedocs.io/en/latest/
   options:
@@ -300,6 +241,7 @@ solving:
     custom_extra_functionality: ../data/custom_extra_functionality.py # Has to be set to false, otherwise the imported solve_network function will not work correctly
     noisy_costs: true
     skip_iterations: false
+    max_iterations: 1
     post_discretization:
       enable: true
       link_unit_size:

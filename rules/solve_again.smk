@@ -11,24 +11,21 @@ rule solve_operations_sector_network:
         ),
         custom_extra_functionality=input_custom_extra_functionality,
         solve_operations=config_provider("solve_operations"),
-        carrier_networks=config_provider("carrier_networks"),
-        pcipmi_projects=config_provider("pcipmi_projects"),
     input:
-        network=RESULTS + "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
-        optimal_link_capacities = "data/optimal_link_capacities/{run}/optimal_link_capacities_{clusters}_{opts}_{sector_opts}_{planning_horizons}.csv",
+        network=RESULTS + "networks/base_s_{clusters}_{opts}_{sector_opts}_2040.nc",
     output:
-        network=RESULTS + "networks/{column}/base_s_ops_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+        network=RESULTS + "networks/{column}/base_s_ops_{clusters}_{opts}_{sector_opts}_2040.nc",
     log:
         solver=RESULTS
-        + "logs/operations/{column}/base_s_ops_{clusters}_{opts}_{sector_opts}_{planning_horizons}_solver.log",
+        + "logs/operations/{column}/base_s_ops_{clusters}_{opts}_{sector_opts}_2040_solver.log",
         memory=RESULTS
-        + "logs/operations/{column}/base_s_ops_{clusters}_{opts}_{sector_opts}_{planning_horizons}_memory.log",
+        + "logs/operations/{column}/base_s_ops_{clusters}_{opts}_{sector_opts}_2040_memory.log",
         python=RESULTS
-        + "logs/operations/{column}/base_s_ops_{clusters}_{opts}_{sector_opts}_{planning_horizons}_python.log",
+        + "logs/operations/{column}/base_s_ops_{clusters}_{opts}_{sector_opts}_2040_python.log",
     benchmark:
         (
             RESULTS
-            + "benchmarks/solve_operations_sector_network/{column}/base_s_ops_{clusters}_{opts}_{sector_opts}_{planning_horizons}"
+            + "benchmarks/solve_operations_sector_network/{column}/base_s_ops_{clusters}_{opts}_{sector_opts}_2040"
         )
     threads: 4
     resources:
@@ -46,7 +43,7 @@ rule solve_operations_sector_networks:
     input:
         expand(
             RESULTS 
-            + "networks/{column}/base_s_ops_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc",
+            + "networks/{column}/base_s_ops_{clusters}_{opts}_{sector_opts}_2040.nc",
             **config["scenario"],
             run=config["run"]["name"],
             column=config["solve_operations"]["columns"]

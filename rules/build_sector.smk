@@ -1726,22 +1726,8 @@ rule prepare_sector_network:
         industry_sector_ratios=resources(
             "industry_sector_ratios_{planning_horizons}.csv"
         ),
-        pcipmi_links_co2_pipeline=lambda w: (
-            resources("pcipmi_projects/links_co2_pipeline_s_{clusters}_{opts}.csv")
-            if (
-                config_provider("carrier_networks", "CO2", "enable")(w) and
-                config_provider("carrier_networks", "CO2", "include", "pcipmi")(w)
-                )
-            else []
-        ),
-        pcipmi_links_h2_pipeline=lambda w: (
-            resources("pcipmi_projects/links_h2_pipeline_s_{clusters}_{opts}.csv")
-            if (
-                config_provider("carrier_networks", "H2", "enable")(w) and
-                config_provider("carrier_networks", "H2", "include", "pcipmi")(w)
-                )
-            else []
-        ),
+        pcipmi_links_co2_pipeline=resources("pcipmi_projects/links_co2_pipeline_s_{clusters}_{opts}.csv"),
+        pcipmi_links_h2_pipeline=resources("pcipmi_projects/links_h2_pipeline_s_{clusters}_{opts}.csv"),
     output:
         resources(
             "networks/base_s_{clusters}_{opts}_{sector_opts}_{planning_horizons}.nc"
